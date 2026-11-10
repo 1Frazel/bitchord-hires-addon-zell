@@ -3,6 +3,7 @@
 const assert = require('assert');
 const { EventEmitter } = require('events');
 const vercelHandler = require('../api/index');
+const nodeServer = require('../server');
 const { R2Client } = require('../lib/r2');
 
 function invokeHandler(path, options = {}) {
@@ -16,6 +17,11 @@ function invokeHandler(path, options = {}) {
       ...(options.headers || {}),
     };
     req.socket = { encrypted: true };
+    if (options.preParsedBody !== undefined) {
+      req.body = options.preParsedBody;
+      req.readableEnded = true;
+      req.complete = true;
+    }
 
     const headersMap = new Map();
     const chunks = [];
@@ -53,16 +59,22 @@ function invokeHandler(path, options = {}) {
       },
     };
 
-    Promise.resolve(vercelHandler(req, res)).catch(reject);
+    if (options.useNodeServer) {
+      nodeServer.emit('request', req, res);
+    } else {
+      Promise.resolve(vercelHandler(req, res)).catch(reject);
+    }
 
     process.nextTick(() => {
-      if (options.body) {
-        const buf = Buffer.isBuffer(options.body)
-          ? options.body
-          : Buffer.from(String(options.body), 'utf8');
-        req.emit('data', buf);
+      if (options.preParsedBody === undefined) {
+        if (options.body) {
+          const buf = Buffer.isBuffer(options.body)
+            ? options.body
+            : Buffer.from(String(options.body), 'utf8');
+          req.emit('data', buf);
+        }
+        req.emit('end');
       }
-      req.emit('end');
     });
   });
 }
@@ -107,7 +119,7 @@ async function runTests() {
   assert.strictEqual(manSecret.json.id, 'com.bitchord.addon.zell.hires');
   console.log('✓ /manifest.json and /:secret/manifest.json verified');
 
-  // 3. Test Admin Login
+  // 3. Test Admin Login (direct, Vercel ?__path= rewrite on server.js, placeholder rewrite, and pre-parsed body)
   const loginRes = await invokeHandler('/api/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -116,7 +128,27 @@ async function runTests() {
   assert.strictEqual(loginRes.status, 200);
   assert(loginRes.json.token, 'Should return admin token');
   const token = loginRes.json.token;
-  console.log('✓ Admin authentication verified');
+
+  // Test exact Vercel rewrite scenario through server.js with custom ADMIN_PASSWORD
+  process.env.ADMIN_PASSWORD = 'sui1104';
+  const vercelRewriteLogin = await invokeHandler('/api?__path=/api/admin/login', {
+    useNodeServer: true,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'sui1104' }),
+  });
+  assert.strictEqual(vercelRewriteLogin.status, 200, 'Vercel rewrite on server.js must return 200');
+  assert(vercelRewriteLogin.json.token, 'Should return admin token for sui1104');
+
+  const placeholderRewriteLogin = await invokeHandler('/api?__path=/api/:path*&path=admin/login', {
+    useNodeServer: true,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    preParsedBody: { password: 'sui1104' },
+  });
+  assert.strictEqual(placeholderRewriteLogin.status, 200, 'Placeholder rewrite + pre-parsed body must return 200');
+  delete process.env.ADMIN_PASSWORD;
+  console.log('✓ Admin authentication & Vercel server.js rewrite handling verified');
 
   // 4. Add a Hi-Res FLAC song via Admin API
   const createRes = await invokeHandler('/api/admin/tracks', {

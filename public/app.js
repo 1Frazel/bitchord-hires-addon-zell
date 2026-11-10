@@ -570,19 +570,32 @@
         if (pendingParsedMeta?.pictureBlob && !artworkURL) {
           uploadStatusText.textContent = 'Uploading extracted album cover art...';
           const ext = pendingParsedMeta.pictureMime === 'image/png' ? 'png' : 'jpg';
-          const coverKey = `covers/${r2Key.split('/').pop().replace(/\.[^.]+$/, '')}.${ext}`;
+          const coverFilename = `${r2Key.split('/').pop().replace(/\.[^.]+$/, '')}.${ext}`;
           try {
-            await uploadViaXhr(
-              '/api/admin/upload-proxy',
-              pendingParsedMeta.pictureBlob,
-              pendingParsedMeta.pictureMime || 'image/jpeg',
-              {
-                'X-Admin-Token': adminToken,
-                'X-Upload-Key': coverKey,
-                'X-Upload-Type': pendingParsedMeta.pictureMime || 'image/jpeg',
-              }
-            );
-            artworkKey = coverKey;
+            const artTicket = await apiCall('/api/admin/presign-upload', {
+              method: 'POST',
+              body: {
+                filename: coverFilename,
+                contentType: pendingParsedMeta.pictureMime || 'image/jpeg',
+                folder: 'covers',
+              },
+            });
+            try {
+              await uploadViaXhr(artTicket.uploadUrl, pendingParsedMeta.pictureBlob, null, {});
+              artworkKey = artTicket.r2Key;
+            } catch {
+              await uploadViaXhr(
+                '/api/admin/upload-proxy',
+                pendingParsedMeta.pictureBlob,
+                pendingParsedMeta.pictureMime || 'image/jpeg',
+                {
+                  'X-Admin-Token': adminToken,
+                  'X-Upload-Key': artTicket.r2Key,
+                  'X-Upload-Type': pendingParsedMeta.pictureMime || 'image/jpeg',
+                }
+              );
+              artworkKey = artTicket.r2Key;
+            }
           } catch (artErr) {
             console.warn('Cover art upload skipped:', artErr.message);
           }
