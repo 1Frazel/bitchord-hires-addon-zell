@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#18181B"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="36" y1="64" x2="220" y2="192" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#FB7185"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="48" stroke="url(#wave)" stroke-opacity="0.28" stroke-width="4"/>
+  <path d="M44 128C60 84 76 84 92 128C108 172 124 172 140 128C156 84 172 84 188 128C198 154 206 146 214 128" stroke="url(#wave)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="64" y="176" width="128" height="30" rx="8" fill="#F59E0B" fill-opacity="0.15" stroke="#F59E0B" stroke-opacity="0.5" stroke-width="2"/>
+  <text x="128" y="196" text-anchor="middle" fill="#FBBF24" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="15" letter-spacing="2">HI-RES</text>
+</svg>

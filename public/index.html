@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zell Hi-Res Vault — Private BitChord Addon</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- LOGIN OVERLAY -->
+  <div id="login-screen" class="login-overlay">
+    <div class="login-card glass">
+      <div class="brand-header">
+        <img src="/icon.svg" alt="Hi-Res Icon" class="brand-logo" />
+        <div>
+          <h1>Zell Hi-Res Vault</h1>
+          <p class="subtitle">Private Lossless &amp; Hi-Res Addon Source for BitChord</p>
+        </div>
+      </div>
+      <form id="login-form">
+        <label class="field-label" for="login-password">Admin Dashboard Password</label>
+        <input
+          type="password"
+          id="login-password"
+          class="input"
+          placeholder="Enter admin password..."
+          autocomplete="current-password"
+          required
+        />
+        <p id="default-pw-hint" class="hint-text">
+          Default password is <code>admin123</code> until you set <code>ADMIN_PASSWORD</code> in Vercel Environment Variables.
+        </p>
+        <div id="login-error" class="alert alert-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-full">Unlock Private Vault</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div id="app-shell" class="app-shell hidden">
+    <!-- Top Navigation Bar -->
+    <header class="topbar glass">
+      <div class="topbar-left">
+        <img src="/icon.svg" alt="Icon" class="topbar-logo" />
+        <div>
+          <div class="topbar-title-row">
+            <h2 id="addon-display-name">Zell Private Hi-Res Vault</h2>
+            <span class="badge badge-gold">HI-RES FLAC</span>
+            <span id="r2-status-pill" class="badge badge-neutral">R2 Checking...</span>
+          </div>
+          <p class="topbar-sub">Account ID: <code>9320408c0a85e91646716a015a3f9b60</code> (Cloudflare R2)</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button id="btn-refresh" class="btn btn-ghost btn-sm" title="Refresh Catalog">↻ Sync</button>
+        <button id="btn-logout" class="btn btn-ghost btn-sm">Lock</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- BITCHORD MANIFEST LINK BANNER -->
+      <section class="manifest-banner glass">
+        <div class="manifest-info">
+          <div class="manifest-label-row">
+            <span class="dot-live"></span>
+            <strong>Your Private BitChord Addon Source Link</strong>
+            <span id="secret-mode-badge" class="badge badge-outline">Secret Link Ready</span>
+          </div>
+          <p class="manifest-help">
+            In BitChord, open <strong>Settings → Sources / Addons → Add Source</strong> and paste this Manifest URL:
+          </p>
+        </div>
+        <div class="manifest-url-box">
+          <input type="text" id="manifest-url-input" class="input mono-input" readonly />
+          <button id="btn-copy-manifest" class="btn btn-primary">Copy for BitChord</button>
+          <a id="btn-open-manifest" href="/manifest.json" target="_blank" rel="noopener" class="btn btn-secondary">View JSON</a>
+        </div>
+      </section>
+
+      <!-- R2 SETUP ALERT IF NOT CONFIGURED -->
+      <div id="r2-setup-banner" class="alert alert-warning hidden">
+        <div>
+          <strong>Cloudflare R2 API Keys Needed for Direct Cloud Uploads:</strong>
+          <span>Your R2 Account ID (<code>9320408c0a85e91646716a015a3f9b60</code>) is pre-configured. Click <strong>Cloudflare R2 Storage</strong> below to enter your R2 Access Key ID &amp; Secret Access Key, or set them in Vercel Environment Variables.</span>
+        </div>
+        <button id="btn-Jump-r2" class="btn btn-sm btn-secondary">Configure R2 Keys</button>
+      </div>
+
+      <!-- STATS CARDS -->
+      <section class="stats-grid">
+        <div class="stat-card glass">
+          <span class="stat-label">Total Songs in Vault</span>
+          <strong id="stat-total-tracks" class="stat-value">0</strong>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-label">Hi-Res Lossless (24-bit)</span>
+          <strong id="stat-hires-tracks" class="stat-value text-gold">0</strong>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-label">Lossless FLAC (16-bit)</span>
+          <strong id="stat-lossless-tracks" class="stat-value">0</strong>
+        </div>
+        <div class="stat-card glass">
+          <span class="stat-label">Vault Storage Used</span>
+          <strong id="stat-storage-used" class="stat-value">0 MB / 10 GB</strong>
+        </div>
+      </section>
+
+      <!-- TABS NAVIGATION -->
+      <div class="tabs-bar">
+        <div class="tabs-left">
+          <button class="tab-btn active" data-tab="tab-library">🎵 Songs Library</button>
+          <button class="tab-btn" data-tab="tab-simulator">⚡ BitChord Match Simulator</button>
+          <button class="tab-btn" data-tab="tab-r2">☁️ Cloudflare R2 Storage</button>
+          <button class="tab-btn" data-tab="tab-settings">⚙️ Addon Settings</button>
+        </div>
+        <div class="tabs-right">
+          <button id="btn-add-song" class="btn btn-primary">+ Upload / Add Song (.flac)</button>
+        </div>
+      </div>
+
+      <!-- TAB 1: SONGS LIBRARY -->
+      <section id="tab-library" class="tab-panel active">
+        <div class="toolbar glass">
+          <input
+            type="search"
+            id="library-search"
+            class="input"
+            placeholder="Filter your private vault by title, artist, album, or ISRC..."
+          />
+        </div>
+
+        <div id="tracks-empty" class="empty-state glass hidden">
+          <div class="empty-icon">🎧</div>
+          <h3>Your Private Hi-Res Vault is Empty</h3>
+          <p>
+            Click <strong>"+ Upload / Add Song (.flac)"</strong> to drop your first lossless <code>.flac</code> track.
+            The dashboard will automatically extract its exact duration, sample rate (Hz), bit depth, tags, and cover art!
+          </p>
+          <button id="btn-empty-add" class="btn btn-primary">+ Upload Your First .flac Song</button>
+        </div>
+
+        <div id="tracks-list" class="tracks-list"></div>
+      </section>
+
+      <!-- TAB 2: BITCHORD MATCH SIMULATOR -->
+      <section id="tab-simulator" class="tab-panel hidden">
+        <div class="card glass">
+          <h3>⚡ BitChord Quality-Upgrade Match Simulator</h3>
+          <p class="card-desc">
+            Test how BitChord's <code>TrackMatcher</code> and <code>QualityUpgrade</code> engine will match a playing YouTube Music song against your private vault.
+          </p>
+          <form id="sim-form" class="form-grid-3">
+            <div>
+              <label class="field-label">YouTube Music Song Title</label>
+              <input type="text" id="sim-title" class="input" placeholder="e.g. Die With A Smile (Official Music Video)" required />
+            </div>
+            <div>
+              <label class="field-label">YouTube Music Artist</label>
+              <input type="text" id="sim-artist" class="input" placeholder="e.g. Lady Gaga, Bruno Mars" />
+            </div>
+            <div>
+              <label class="field-label">YouTube Duration (seconds, optional)</label>
+              <input type="number" step="1" id="sim-duration" class="input" placeholder="e.g. 251" />
+            </div>
+            <div class="full-span">
+              <button type="submit" class="btn btn-primary">Simulate BitChord Playback Upgrade</button>
+            </div>
+          </form>
+
+          <div id="sim-results" class="sim-results hidden"></div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CLOUDFLARE R2 STORAGE -->
+      <section id="tab-r2" class="tab-panel hidden">
+        <div class="card glass">
+          <h3>☁️ Cloudflare R2 Storage Configuration (10 GB Free Tier)</h3>
+          <p class="card-desc">
+            Your Cloudflare R2 Account ID and S3 Endpoint are pre-configured. Provide your R2 S3 API Token below (or via Vercel Environment Variables) to enable direct browser-to-R2 <code>.flac</code> uploads and automatic <code>catalog.json</code> cloud persistence.
+          </p>
+
+          <form id="r2-form" class="form-grid-2">
+            <div>
+              <label class="field-label">Cloudflare Account ID</label>
+              <input type="text" id="r2-account-id" class="input mono-input" value="9320408c0a85e91646716a015a3f9b60" required />
+            </div>
+            <div>
+              <label class="field-label">S3 API Endpoint</label>
+              <input type="url" id="r2-endpoint" class="input mono-input" value="https://9320408c0a85e91646716a015a3f9b60.r2.cloudflarestorage.com" required />
+            </div>
+            <div>
+              <label class="field-label">R2 Access Key ID</label>
+              <input type="text" id="r2-access-key" class="input mono-input" placeholder="Enter R2 S3 Access Key ID..." />
+            </div>
+            <div>
+              <label class="field-label">R2 Secret Access Key</label>
+              <input type="password" id="r2-secret-key" class="input mono-input" placeholder="Enter R2 S3 Secret Access Key..." />
+            </div>
+            <div>
+              <label class="field-label">R2 Bucket Name</label>
+              <input type="text" id="r2-bucket" class="input mono-input" placeholder="e.g. bitchord-hires (auto-detected if blank)" />
+            </div>
+            <div>
+              <label class="field-label">Public Bucket URL (Optional)</label>
+              <input type="url" id="r2-public-url" class="input mono-input" placeholder="Leave blank to use private Presigned URLs" />
+            </div>
+            <div class="full-span btn-row">
+              <button type="submit" id="btn-save-r2" class="btn btn-primary">Save, Test R2 &amp; Auto-Configure CORS</button>
+              <button type="button" id="btn-test-r2" class="btn btn-secondary">Test Current Connection</button>
+            </div>
+          </form>
+
+          <div id="r2-feedback" class="alert hidden" style="margin-top: 16px;"></div>
+
+          <hr class="divider" />
+
+          <h4>Vercel Environment Variables (Recommended for Production)</h4>
+          <p class="card-desc">
+            When deploying to Vercel, add these variables in <strong>Vercel Project Settings → Environment Variables</strong> so your credentials persist across all serverless cold starts:
+          </p>
+          <pre id="vercel-env-preview" class="code-block">R2_ACCOUNT_ID=9320408c0a85e91646716a015a3f9b60
+R2_ENDPOINT=https://9320408c0a85e91646716a015a3f9b60.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=your_r2_access_key_id
+R2_SECRET_ACCESS_KEY=your_r2_secret_access_key
+R2_BUCKET_NAME=bitchord-hires
+ADMIN_PASSWORD=your_strong_dashboard_password
+ADDON_SECRET=zell-private</pre>
+
+          <details style="margin-top: 16px;">
+            <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.9rem;">
+              Manual R2 Bucket CORS Policy JSON (Only needed if your API Token lacks Bucket Admin permission)
+            </summary>
+            <pre class="code-block" style="margin-top: 10px;">[
+  {
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST", "HEAD", "DELETE"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag", "Content-Length", "Content-Range", "Accept-Ranges"],
+    "MaxAgeSeconds": 86400
+  }
+]</pre>
+          </details>
+        </div>
+      </section>
+
+      <!-- TAB 4: ADDON SETTINGS -->
+      <section id="tab-settings" class="tab-panel hidden">
+        <div class="card glass">
+          <h3>⚙️ BitChord Addon Manifest &amp; Security Settings</h3>
+          <p class="card-desc">
+            Customize how your addon identifies itself inside BitChord and control secret-token access.
+          </p>
+          <form id="settings-form" class="form-grid-2">
+            <div>
+              <label class="field-label">Addon Display Name</label>
+              <input type="text" id="set-name" class="input" required />
+            </div>
+            <div>
+              <label class="field-label">Author Name</label>
+              <input type="text" id="set-author" class="input" />
+            </div>
+            <div class="full-span">
+              <label class="field-label">Description</label>
+              <input type="text" id="set-description" class="input" />
+            </div>
+            <div>
+              <label class="field-label">Private URL Secret Slug</label>
+              <input type="text" id="set-secret" class="input mono-input" placeholder="e.g. zell-private" required />
+              <span class="hint-text">Used in <code>https://your-site.vercel.app/{secret}/manifest.json</code></span>
+            </div>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="set-require-secret" />
+                <span><strong>Strict Secret Mode:</strong> Reject requests that don't include the secret token in the URL path</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="set-allow-downloads" checked />
+                <span><strong>Allow Offline Downloads:</strong> Let BitChord download/cache lossless tracks from this source</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="set-check-lossless" />
+                <span><strong>Require Lossless Output Device:</strong> Only activate when USB DAC / wired / LDAC is connected</span>
+              </label>
+            </div>
+            <div class="full-span">
+              <button type="submit" class="btn btn-primary">Save Addon Settings</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <!-- MINI AUDIO PLAYER FOOTER -->
+    <div id="player-bar" class="player-bar glass hidden">
+      <div class="player-meta">
+        <img id="player-cover" src="/icon.svg" alt="Cover" class="player-cover" />
+        <div>
+          <strong id="player-title">Track Title</strong>
+          <span id="player-artist" class="player-artist">Artist</span>
+        </div>
+        <span id="player-badge" class="badge badge-gold">HI-RES</span>
+      </div>
+      <audio id="audio-player" controls preload="metadata" class="audio-el"></audio>
+      <button id="btn-close-player" class="btn btn-ghost btn-sm">✕</button>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT SONG -->
+  <div id="track-modal" class="modal-backdrop hidden">
+    <div class="modal-card glass">
+      <div class="modal-header">
+        <h3 id="modal-title">Upload / Add Lossless Song</h3>
+        <button type="button" id="btn-close-modal" class="btn btn-ghost btn-sm">✕</button>
+      </div>
+
+      <form id="track-form">
+        <input type="hidden" id="track-id" />
+
+        <!-- DRAG & DROP FLAC FILE ZONE -->
+        <div id="drop-zone" class="drop-zone">
+          <input type="file" id="file-input" accept=".flac,.wav,.alac,.m4a,.mp3,.ogg,audio/*" class="hidden-file" />
+          <div class="drop-content">
+            <div class="drop-icon">🎼</div>
+            <div>
+              <strong id="drop-title">Click or Drag &amp; Drop your <code>.flac</code> file here</strong>
+              <p id="drop-subtitle" class="hint-text">
+                Automatically extracts Title, Artist, Album, Exact Duration, Sample Rate (Hz), Bit Depth &amp; Cover Art
+              </p>
+            </div>
+          </div>
+          <div id="detected-specs" class="detected-specs hidden"></div>
+        </div>
+
+        <!-- UPLOAD PROGRESS -->
+        <div id="upload-progress-wrap" class="upload-progress-wrap hidden">
+          <div class="progress-label-row">
+            <span id="upload-status-text">Uploading to Cloudflare R2...</span>
+            <strong id="upload-percent-text">0%</strong>
+          </div>
+          <div class="progress-bar-bg">
+            <div id="upload-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="form-grid-2" style="margin-top: 16px;">
+          <div>
+            <label class="field-label">Song Title * <span class="hint-inline">(Matches YouTube Music)</span></label>
+            <input type="text" id="f-title" class="input" placeholder="e.g. Never Gonna Give You Up" required />
+          </div>
+          <div>
+            <label class="field-label">Artist * <span class="hint-inline">(Comma-separated if multiple)</span></label>
+            <input type="text" id="f-artist" class="input" placeholder="e.g. Rick Astley" required />
+          </div>
+          <div>
+            <label class="field-label">Album</label>
+            <input type="text" id="f-album" class="input" placeholder="e.g. Whenever You Need Somebody" />
+          </div>
+          <div>
+            <label class="field-label">Duration in Seconds * <span class="hint-inline">(Auto-filled from FLAC)</span></label>
+            <input type="number" step="0.01" id="f-duration" class="input mono-input" placeholder="e.g. 213.57" required />
+          </div>
+          <div>
+            <label class="field-label">Quality Tier Badge in BitChord</label>
+            <select id="f-quality" class="input">
+              <option value="HI_RES_LOSSLESS">Hi-Res Lossless (24-bit / &gt;48kHz)</option>
+              <option value="LOSSLESS">Lossless FLAC (16-bit / 44.1kHz)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Sample Rate (Hz) &amp; Bit Depth</label>
+            <div class="split-2">
+              <input type="number" id="f-samplerate" class="input mono-input" value="44100" title="Sample Rate in Hz" />
+              <input type="number" id="f-bitdepth" class="input mono-input" value="16" title="Bit Depth (16 or 24)" />
+            </div>
+          </div>
+          <div class="full-span">
+            <label class="field-label">
+              YouTube Match Aliases <span class="hint-inline">(Optional — alternate titles or <code>Title | Artist</code> separated by commas)</span>
+            </label>
+            <input
+              type="text"
+              id="f-aliases"
+              class="input"
+              placeholder="e.g. Romaji Title, English Title | Artist Name"
+            />
+          </div>
+          <div>
+            <label class="field-label">Cloudflare R2 Object Key <span class="hint-inline">(Auto-filled on upload)</span></label>
+            <input type="text" id="f-r2key" class="input mono-input" placeholder="tracks/xxxx-song.flac" />
+          </div>
+          <div>
+            <label class="field-label">Or Direct External Audio URL <span class="hint-inline">(Optional fallback)</span></label>
+            <input type="url" id="f-exturl" class="input mono-input" placeholder="https://..." />
+          </div>
+          <div class="full-span cover-preview-row">
+            <img id="f-cover-preview" src="/icon.svg" alt="Cover Preview" class="cover-thumb" />
+            <div style="flex: 1;">
+              <label class="field-label">Cover Artwork URL (Auto-extracted from FLAC or paste image URL)</label>
+              <input type="text" id="f-artwork-url" class="input mono-input" placeholder="Auto-uploaded from FLAC embedded art or https://..." />
+              <input type="hidden" id="f-artwork-key" />
+            </div>
+          </div>
+        </div>
+
+        <div id="modal-error" class="alert alert-error hidden" style="margin-top: 14px;"></div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="btn-submit-track" class="btn btn-primary">Upload to R2 &amp; Save Song</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/flac-parser.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

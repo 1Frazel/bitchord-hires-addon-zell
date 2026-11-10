@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/manifest.json", "destination": "/api?__path=/manifest.json" },
+    { "source": "/addon.json", "destination": "/api?__path=/addon.json" },
+    { "source": "/search", "destination": "/api?__path=/search" },
+    { "source": "/health", "destination": "/api?__path=/health" },
+    { "source": "/stream/:id*", "destination": "/api?__path=/stream/:id*" },
+    { "source": "/file/:id*", "destination": "/api?__path=/file/:id*" },
+    { "source": "/art/:id*", "destination": "/api?__path=/art/:id*" },
+    { "source": "/api/:path*", "destination": "/api?__path=/api/:path*" },
+    { "source": "/:secret/manifest.json", "destination": "/api?__path=/:secret/manifest.json" },
+    { "source": "/:secret/addon.json", "destination": "/api?__path=/:secret/addon.json" },
+    { "source": "/:secret/search", "destination": "/api?__path=/:secret/search" },
+    { "source": "/:secret/health", "destination": "/api?__path=/:secret/health" },
+    { "source": "/:secret/stream/:id*", "destination": "/api?__path=/:secret/stream/:id*" },
+    { "source": "/:secret/file/:id*", "destination": "/api?__path=/:secret/file/:id*" },
+    { "source": "/:secret/art/:id*", "destination": "/api?__path=/:secret/art/:id*" }
+  ]
+}

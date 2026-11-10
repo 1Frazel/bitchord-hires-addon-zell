@@ -1,0 +1,25 @@
+{
+  "name": "bitchord-hires-addon-zell",
+  "version": "1.2.0",
+  "description": "Private Lossless FLAC & Hi-Res Addon Source for BitChord backed by Cloudflare R2",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test/verify.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "bitchord",
+    "addon",
+    "lossless",
+    "flac",
+    "hires",
+    "cloudflare-r2",
+    "vercel"
+  ],
+  "author": "1Frazel",
+  "license": "MIT"
+}
